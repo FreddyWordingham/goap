@@ -1,0 +1,91 @@
+max_depth: 8
+solve: "best"
+state:
+  properties:
+    energy: 50
+    health: 20
+    consciousness: 10
+    raw_meat: 0
+    cooked_meat: 0
+    wood: 0
+    fire: 0
+goals:
+  - weight: 1
+    property: "energy"
+    target: 100
+  - weight: 1
+    property: "health"
+    target: 30
+  - weight: 1
+    property: "consciousness"
+    target: 10
+  - weight: 1
+    property: "fire"
+    target: 1
+actions:
+  - label: "gather_wood"
+    duration: 2
+    deltas:
+      energy: -10
+      consciousness: -10
+      wood: 10
+  - label: "build_fire"
+    duration: 1
+    deltas:
+      energy: -5
+      consciousness: -5
+      wood: -10
+      fire: 10
+  - label: "hunt"
+    duration: 2
+    deltas:
+      energy: -10
+      health: -2
+      consciousness: -40
+      raw_meat: 3
+  - label: "cook_meat"
+    duration: 1
+    deltas:
+      energy: -5
+      health: 0
+      consciousness: -5
+      raw_meat: -1
+      cooked_meat: 1
+      fire: -1
+  - label: "eat_raw_meat"
+    duration: 1
+    deltas:
+      energy: 5
+      health: 2
+      consciousness: -10
+      raw_meat: -1
+  - label: "eat_cooked_meat"
+    duration: 1
+    deltas:
+      energy: 30
+      health: 5
+      consciousness: -10
+      cooked_meat: -1
+  - label: "exercise"
+    duration: 2
+    deltas:
+      energy: -10
+      health: 5
+      consciousness: -20
+  - label: "sleep"
+    duration: 8
+    deltas:
+      energy: -10
+      health: 5
+      consciousness: 80
+  - label: "sleep_with_fire"
+    duration: 8
+    deltas:
+      health: 10
+      consciousness: 100
+      fire: -1
+  - label: "wait"
+    duration: 1
+    deltas:
+      energy: -2
+      consciousness: -1
