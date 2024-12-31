@@ -1,5 +1,6 @@
-use std::fs;
-// use std::{fs, time::Instant};
+use std::{cmp::Ordering, fs, time::Instant};
+
+use colored::*;
 
 use goap_ai::{Config, Model, Planner, State};
 
@@ -12,26 +13,33 @@ fn print_state_headers(state: &State) {
         for name in &names {
             let delay = longest_name_length - name.len();
             if i < delay {
-                print!("     ");
+                print!("           ");
+            } else if let Some(c) = name.chars().nth(i - delay) {
+                print!("     {}     ", c);
             } else {
-                if let Some(c) = name.chars().nth(i - delay) {
-                    print!("  {}  ", c);
-                } else {
-                    print!("     ");
-                }
+                print!("           ");
             }
         }
         println!();
     }
 }
 
-fn print_state_values(state: &State) {
+fn print_state_changes(old_state: &State, state: &State) {
     let mut names: Vec<_> = state.properties.keys().collect();
     names.sort(); // Sort the keys alphabetically
 
     for name in names {
-        if let Some(value) = state.properties.get(name) {
-            print!("{:^5}", value);
+        if let Some(old_value) = old_state.properties.get(name) {
+            if let Some(value) = state.properties.get(name) {
+                print!("{:>5} ", value);
+
+                let delta = value - old_value;
+                match delta.cmp(&0) {
+                    Ordering::Greater => print!("{:5}", format!("{:+}", delta).blue()),
+                    Ordering::Less => print!("{:5}", format!("{:+}", delta).red()),
+                    Ordering::Equal => print!("     "),
+                }
+            }
         }
     }
 }
@@ -45,34 +53,30 @@ fn main() {
     let planner = Planner::new(config.max_depth, config.actions);
 
     // Plan
-    let (_score, _time, plan) = if config.solve.to_lowercase() == "best" {
-        // let start = Instant::now();
+    let (score, time, plan) = if config.solve.to_lowercase() == "best" {
+        let start = Instant::now();
         let pl = planner.best_plan(&model);
-        // let duration = start.elapsed();
-        // println!("Best plan in: {:?}", duration);
+        let duration = start.elapsed();
+        println!("Best plan in        : {:?}", duration);
         pl
     } else {
-        // let start = Instant::now();
+        let start = Instant::now();
         let pl = planner.quick_plan(&model);
-        // let duration = start.elapsed();
-        // println!("Quick plan in: {:?}", duration);
+        let duration = start.elapsed();
+        println!("Quick plan in       : {:?}", duration);
         pl
     };
-    // println!();
-    // println!("Steps               : {}", plan.len());
-    // println!("Est. Discontentment : {score}");
-    // println!("Est. Time           : {time}");
-    // println!("----------------------------");
-    // for (key, val) in &model.state.properties {
-    //     println!("{}: {}", key, val);
-    // }
-    // println!();
+    println!("Steps               : {}", plan.len());
+    println!("Est. Discontentment : {score}");
+    println!("Est. Time           : {time}");
+    println!("----------------------------");
 
     print_state_headers(&model.state);
-    println!("-----------------------------------");
+    print_state_changes(&model.state, &model.state);
+    println!("[init]");
     for action in plan.iter() {
         if let Some(next_model) = model.apply(action) {
-            print_state_values(&model.state);
+            print_state_changes(&model.state, &next_model.state);
             println!("{}", action.label);
             model = next_model;
         }

@@ -1,5 +1,5 @@
 max_depth: 8
-solve: "fast"
+solve: "best"
 state:
   properties:
     energy: 50
