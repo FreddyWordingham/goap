@@ -1,11 +1,11 @@
-use std::{cmp::Ordering, fs, time::Instant};
+use std::{cmp::Ordering, fs};
 
 use colored::*;
 
-use goap_ai::{Action, Config, Model, Planner, Solution, State};
+use goap_ai::{Config, Model, Planner, State};
 
 fn print_state_headers(state: &State) {
-    let mut names: Vec<_> = state.properties.keys().collect();
+    let mut names: Vec<_> = state.keys().collect();
     names.sort();
 
     let longest_name_length = names.iter().map(|name| name.len()).max().unwrap_or(0); // Default to 0 if there are no keys
@@ -25,12 +25,12 @@ fn print_state_headers(state: &State) {
 }
 
 fn print_state_changes(old_state: &State, state: &State) {
-    let mut names: Vec<_> = state.properties.keys().collect();
+    let mut names: Vec<_> = state.keys().collect();
     names.sort(); // Sort the keys alphabetically
 
     for name in names {
-        if let Some(old_value) = old_state.properties.get(name) {
-            if let Some(value) = state.properties.get(name) {
+        if let Some(old_value) = old_state.get(name) {
+            if let Some(value) = state.get(name) {
                 print!("{:>5} ", value);
 
                 let delta = value - old_value;
@@ -44,37 +44,21 @@ fn print_state_changes(old_state: &State, state: &State) {
     }
 }
 
-fn solve_fast(model: &Model, planner: &Planner) -> Vec<Action> {
-    println!("Solving with quick plan");
-    let start = Instant::now();
-    let (_final_discontentment, _total_duration, plan) = planner.best_plan(model);
-    let duration = start.elapsed();
-    println!("Best plan in        : {:?}", duration);
-    plan
-}
-
-fn solve_best(model: &Model, planner: &Planner) -> Vec<Action> {
-    println!("Solving with best plan");
-    let start = Instant::now();
-    let (_final_discontentment, _total_duration, plan) = planner.quick_plan(model);
-    let duration = start.elapsed();
-    println!("Quick plan in       : {:?}", duration);
-    plan
-}
-
 fn main() {
-    let config_file = fs::read_to_string("config.yml").expect("Failed to read config file");
-    let config: Config = serde_yaml::from_str(&config_file).expect("Failed to parse YAML");
+    let config_str = fs::read_to_string("config.yml").expect("Failed to read config file");
+    let config: Config = serde_yaml::from_str(&config_str).expect("Failed to parse YAML");
 
     // Build the model and planner
     let mut model = Model::new(config.state, config.goals);
-    let planner = Planner::new(config.max_depth, config.actions);
+    let planner = Planner::new(
+        config.algorithm,
+        config.solution,
+        config.max_depth,
+        config.actions,
+    );
 
     // Plan
-    let plan = match config.solution {
-        Solution::Fast => solve_fast(&model, &planner),
-        Solution::Best => solve_best(&model, &planner),
-    };
+    let (_est_discontentment, _est_duration, plan) = planner.plan(&model);
 
     print_state_headers(&model.state);
     print_state_changes(&model.state, &model.state);

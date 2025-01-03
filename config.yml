@@ -1,20 +1,55 @@
-max_depth: 18
+max_depth: 10
+algorithm: Hybrid
 solution: Fast
 state:
-  properties:
-    energy: 150
+  energy: 50
+  health: 20
+  num_apples: 2
+  num_uncooked_meat: 0
+  num_cooked_meat: 0
 goals:
-  - weight: 1
-    property: "energy"
-    target: 50
+  health:
+    target: 100
     kind: GreaterThanOrEqualTo
-    scale: 0.01
+    weight: 4
+  energy:
+    target: 100
+    kind: GreaterThanOrEqualTo
+    weight: 1
 actions:
-  - label: "energy_up"
-    duration: 2
+  - label: gather
+    duration: 1
     deltas:
-      energy: 10
-  - label: "energy_down"
-    duration: 2
+      energy: -5
+      num_apples: 5
+  - label: hunt
+    duration: 20
     deltas:
       energy: -10
+      num_uncooked_meat: 3
+  - label: cook
+    duration: 2
+    deltas:
+      energy: -5
+      num_uncooked_meat: -1
+      num_cooked_meat: 1
+  - label: eat_apple
+    duration: 1
+    deltas:
+      energy: 5
+      health: 5
+      num_apples: -1
+  - label: eat_cooked_meat
+    duration: 1
+    deltas:
+      energy: 20
+      health: 30
+      num_cooked_meat: -1
+  - label: rest
+    duration: 5
+    deltas:
+      energy: 10
+  - label: wait
+    duration: 1
+    deltas:
+      energy: -1

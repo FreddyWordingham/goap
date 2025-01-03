@@ -1,7 +1,5 @@
 use serde::Deserialize;
 
-use crate::State;
-
 #[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug, Deserialize)]
 pub enum DiscontentmentKind {
@@ -12,23 +10,19 @@ pub enum DiscontentmentKind {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Goal {
-    property: String,
+    weight: f32, // Weight to apply per difference from the target
     target: i32, // Value to achieve
-    scale: f32,  // Discontentment per delta from target
-    weight: f32, // Overall goal weighting
-    kind: DiscontentmentKind,
+    pub kind: DiscontentmentKind,
 }
 
 impl Goal {
-    pub fn discontentment(&self, state: &State) -> f32 {
-        let current_value = *state.properties.get(&self.property).unwrap_or(&0);
-
+    pub fn discontentment(&self, current_value: i32) -> f32 {
         let delta = match self.kind {
             DiscontentmentKind::GreaterThanOrEqualTo => (self.target - current_value).max(0),
             DiscontentmentKind::LessThanOrEqualTo => (current_value - self.target).max(0),
             DiscontentmentKind::EqualTo => (self.target - current_value).abs(),
         };
 
-        self.scale * self.weight * delta as f32
+        self.weight * delta as f32
     }
 }
