@@ -58,7 +58,7 @@ fn main() {
     );
 
     // Plan
-    let (_est_discontentment, _est_duration, plan) = planner.plan(&model);
+    let plan = planner.plan(&model);
 
     print_state_headers(&model.state);
     print_state_changes(&model.state, &model.state);
@@ -66,14 +66,14 @@ fn main() {
         "{} [init]",
         format!("({:.2})", model.calculate_discontentment()).green()
     );
-    for action in plan.iter() {
-        if let Some(next_model) = model.apply(action) {
+    for (label, action) in plan.actions.iter() {
+        if let Some(next_model) = model.apply(label.to_string(), action) {
             print_state_changes(&model.state, &next_model.state);
             print!(
                 "{} ",
                 format!("({:.2})", next_model.calculate_discontentment()).green()
             );
-            println!("{}", action.label);
+            println!("{}", label);
             model = next_model;
         }
     }

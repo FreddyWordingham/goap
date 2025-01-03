@@ -7,7 +7,7 @@ pub struct Model {
     pub time: i32,
     pub state: State,
     pub goals: HashMap<String, Goal>,
-    pub action_history: Vec<Action>,
+    pub action_history: Vec<(String, Action)>,
 }
 
 impl Model {
@@ -21,10 +21,10 @@ impl Model {
         }
     }
 
-    pub fn apply(&self, action: &Action) -> Option<Self> {
+    pub fn apply(&self, label: String, action: &Action) -> Option<Self> {
         if let Some(next_state) = self.state.apply(action) {
             let mut updated_action_history = self.action_history.clone();
-            updated_action_history.push(action.clone());
+            updated_action_history.push((label, action.clone()));
             Some(Self {
                 time: self.time + action.duration,
                 state: next_state,

@@ -44,6 +44,9 @@ A `State` object is a list of key-value pairs which represent a snapshot of the 
 state:
   energy: 50
   health: 20
+  num_apples: 2
+  num_uncooked_meat: 0
+  num_cooked_meat: 0
 ```
 
 ### Goals
@@ -52,10 +55,6 @@ state:
 
 ```yaml
 goals:
-  health:
-    target: 100
-    kind: Minimize time
-    weight: 1
   health:
     target: 100
     kind: GreaterThanOrEqualTo
@@ -78,10 +77,42 @@ $discontentment = \sum_{i=1}^{n} weight_i \times state_i - goal_i$
 
 ```yaml
 actions:
-  eat:
-    energy: 0
-  sleep:
-    health: 0
+  - label: gather
+    duration: 1
+    deltas:
+      energy: -5
+      num_apples: 5
+  - label: hunt
+    duration: 20
+    deltas:
+      energy: -10
+      num_uncooked_meat: 3
+  - label: cook
+    duration: 2
+    deltas:
+      energy: -5
+      num_uncooked_meat: -1
+      num_cooked_meat: 1
+  - label: eat_apple
+    duration: 1
+    deltas:
+      energy: 5
+      health: 5
+      num_apples: -1
+  - label: eat_cooked_meat
+    duration: 1
+    deltas:
+      energy: 20
+      health: 30
+      num_cooked_meat: -1
+  - label: rest
+    duration: 5
+    deltas:
+      energy: 10
+  - label: wait
+    duration: 1
+    deltas:
+      energy: -1
 ```
 
 ### Plan

@@ -11,5 +11,5 @@ pub struct Config {
     pub max_depth: usize,
     pub state: State,
     pub goals: HashMap<String, Goal>,
-    pub actions: Vec<Action>,
+    pub actions: HashMap<String, Action>,
 }

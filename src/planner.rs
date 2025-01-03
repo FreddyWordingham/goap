@@ -20,12 +20,19 @@ pub enum Solution {
     Best,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct Plan {
+    pub total_discontentment: f32,
+    pub total_time: i32,
+    pub actions: Vec<(String, Action)>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Planner {
     algorithm: Algorithm,
     solution: Solution,
     max_depth: usize,
-    actions: Vec<Action>,
+    actions: HashMap<String, Action>,
 }
 
 impl Planner {
@@ -34,7 +41,7 @@ impl Planner {
         algorithm: Algorithm,
         solution: Solution,
         max_depth: usize,
-        actions: Vec<Action>,
+        actions: HashMap<String, Action>,
     ) -> Self {
         Self {
             algorithm,
@@ -44,7 +51,7 @@ impl Planner {
         }
     }
 
-    pub fn plan(&self, model: &Model) -> (f32, i32, Vec<Action>) {
+    pub fn plan(&self, model: &Model) -> Plan {
         match (self.algorithm, self.solution) {
             (Algorithm::Traditional, Solution::Fast) => self.fast_total_plan(model),
             (Algorithm::Efficient, Solution::Fast) => self.fast_efficiency_plan(model),
@@ -65,7 +72,7 @@ impl Planner {
     }
 
     /// A* fast plan (traditional) focusing on lowering discontentment quickly.
-    pub fn fast_total_plan(&self, start_model: &Model) -> (f32, i32, Vec<Action>) {
+    pub fn fast_total_plan(&self, start_model: &Model) -> Plan {
         // Heuristic: how much discontentment remains?
         fn heuristic(model: &Model) -> f32 {
             model.calculate_discontentment()
@@ -96,24 +103,24 @@ impl Planner {
             if node.model.calculate_discontentment() < f32::EPSILON
                 || depth_so_far >= self.max_depth
             {
-                return (
-                    node.model.calculate_discontentment(),
-                    node.time,
-                    node.plan.clone(),
-                );
+                return Plan {
+                    total_discontentment: node.model.calculate_discontentment(),
+                    total_time: node.time,
+                    actions: node.plan.clone(),
+                };
             }
             visited.insert(node.model.state.clone(), node.cost_so_far);
 
             // Expand actions
-            for action in &self.actions {
-                if let Some(next_model) = node.model.apply(action) {
+            for (label, action) in &self.actions {
+                if let Some(next_model) = node.model.apply(label.clone(), action) {
                     let new_g = node.cost_so_far + next_model.calculate_discontentment();
                     let new_time = node.time + action.duration;
                     if !visited.contains_key(&next_model.state)
                         || new_g < visited[&next_model.state]
                     {
                         let mut new_plan = node.plan.clone();
-                        new_plan.push(action.clone());
+                        new_plan.push((label.clone(), action.clone()));
                         let new_h = heuristic(&next_model);
                         frontier.push(AStarNode {
                             cost_so_far: new_g,
@@ -126,11 +133,16 @@ impl Planner {
                 }
             }
         }
-        (start_discontent, 0, vec![])
+
+        Plan {
+            total_discontentment: start_discontent,
+            total_time: 0,
+            actions: vec![],
+        }
     }
 
     /// A* plan optimizing efficiency (discontentment reduction per time).
-    pub fn fast_efficiency_plan(&self, start_model: &Model) -> (f32, i32, Vec<Action>) {
+    pub fn fast_efficiency_plan(&self, start_model: &Model) -> Plan {
         // For efficiency, we'll invert "efficiency" into a cost.
         // Higher efficiency => lower cost => A* prioritizes those paths.
         fn efficiency_heuristic(model: &Model) -> f32 {
@@ -151,6 +163,7 @@ impl Planner {
             plan: vec![],
         });
 
+        // A* loop
         while let Some(node) = frontier.pop() {
             if let Some(&best_known) = visited.get(&node.model.state) {
                 if node.cost_so_far > best_known {
@@ -161,17 +174,17 @@ impl Planner {
             if node.model.calculate_discontentment() < f32::EPSILON
                 || depth_so_far >= self.max_depth
             {
-                return (
-                    node.model.calculate_discontentment(),
-                    node.time,
-                    node.plan.clone(),
-                );
+                return Plan {
+                    total_discontentment: node.model.calculate_discontentment(),
+                    total_time: node.time,
+                    actions: node.plan.clone(),
+                };
             }
             visited.insert(node.model.state.clone(), node.cost_so_far);
 
             // Expand actions
-            for action in &self.actions {
-                if let Some(next_model) = node.model.apply(action) {
+            for (label, action) in &self.actions {
+                if let Some(next_model) = node.model.apply(label.clone(), action) {
                     let discontent_delta = node.model.calculate_discontentment()
                         - next_model.calculate_discontentment();
                     let efficiency = discontent_delta / action.duration.max(1) as f32;
@@ -183,7 +196,7 @@ impl Planner {
                         || new_cost < visited[&next_model.state]
                     {
                         let mut new_plan = node.plan.clone();
-                        new_plan.push(action.clone());
+                        new_plan.push((label.clone(), action.clone()));
                         let new_h = efficiency_heuristic(&next_model);
                         frontier.push(AStarNode {
                             cost_so_far: new_cost,
@@ -196,11 +209,16 @@ impl Planner {
                 }
             }
         }
-        (start_discontent, 0, vec![])
+
+        Plan {
+            total_discontentment: start_discontent,
+            total_time: 0,
+            actions: vec![],
+        }
     }
 
     /// A* plan mixing efficiency and raw discontentment (hybrid).
-    pub fn fast_hybrid_plan(&self, start_model: &Model) -> (f32, i32, Vec<Action>) {
+    pub fn fast_hybrid_plan(&self, start_model: &Model) -> Plan {
         fn hybrid_heuristic(model: &Model) -> f32 {
             model.calculate_discontentment()
         }
@@ -218,6 +236,7 @@ impl Planner {
             plan: vec![],
         });
 
+        // A* loop
         while let Some(node) = frontier.pop() {
             if let Some(&best_known) = visited.get(&node.model.state) {
                 if node.cost_so_far > best_known {
@@ -228,16 +247,16 @@ impl Planner {
             if node.model.calculate_discontentment() < f32::EPSILON
                 || depth_so_far >= self.max_depth
             {
-                return (
-                    node.model.calculate_discontentment(),
-                    node.time,
-                    node.plan.clone(),
-                );
+                return Plan {
+                    total_discontentment: node.model.calculate_discontentment(),
+                    total_time: node.time,
+                    actions: node.plan.clone(),
+                };
             }
             visited.insert(node.model.state.clone(), node.cost_so_far);
 
-            for action in &self.actions {
-                if let Some(next_model) = node.model.apply(action) {
+            for (label, action) in &self.actions {
+                if let Some(next_model) = node.model.apply(label.clone(), action) {
                     let discontent_delta = node.model.calculate_discontentment()
                         - next_model.calculate_discontentment();
                     let efficiency = discontent_delta / action.duration.max(1) as f32;
@@ -257,7 +276,7 @@ impl Planner {
                         || new_cost < visited[&next_model.state]
                     {
                         let mut new_plan = node.plan.clone();
-                        new_plan.push(action.clone());
+                        new_plan.push((label.clone(), action.clone()));
                         let new_h = hybrid_heuristic(&next_model);
                         frontier.push(AStarNode {
                             cost_so_far: new_cost,
@@ -270,7 +289,12 @@ impl Planner {
                 }
             }
         }
-        (start_discontent, 0, vec![])
+
+        Plan {
+            total_discontentment: start_discontent,
+            total_time: 0,
+            actions: vec![],
+        }
     }
 
     /// Exhaustive best plan (traditional), using memoized search.
@@ -278,15 +302,19 @@ impl Planner {
         &self,
         model: &Model,
         depth: usize,
-        memo: &mut HashMap<(State, usize), (f32, i32, Vec<Action>)>,
-    ) -> (f32, i32, Vec<Action>) {
+        memo: &mut HashMap<(State, usize), Plan>,
+    ) -> Plan {
         let key = (model.state.clone(), depth);
         if let Some(result) = memo.get(&key) {
             return result.clone();
         }
         if depth == 0 {
             let score = model.calculate_discontentment();
-            let res = (score, 0, vec![]);
+            let res = Plan {
+                total_discontentment: score,
+                total_time: 0,
+                actions: vec![],
+            };
             memo.insert(key, res.clone());
             return res;
         }
@@ -296,23 +324,28 @@ impl Planner {
         let mut best_time = 0;
         let mut best_plan = vec![];
 
-        for action in &self.actions {
-            if let Some(next_model) = model.apply(action) {
-                let (sub_score, sub_time, mut sub_plan) =
-                    self.best_total_plan(&next_model, depth - 1, memo);
+        for (label, action) in &self.actions {
+            if let Some(next_model) = model.apply(label.clone(), action) {
+                let mut sub_plan = self.best_total_plan(&next_model, depth - 1, memo);
 
                 // Prioritize lower discontentment, then shorter time
-                if sub_score < best_score
-                    || (sub_score == best_score && sub_time + action.duration < best_time)
+                if sub_plan.total_discontentment < best_score
+                    || (sub_plan.total_discontentment == best_score
+                        && sub_plan.total_time + action.duration < best_time)
                 {
-                    best_score = sub_score;
-                    best_time = sub_time + action.duration;
-                    sub_plan.insert(0, action.clone());
-                    best_plan = sub_plan;
+                    best_score = sub_plan.total_discontentment;
+                    best_time = sub_plan.total_time + action.duration;
+                    sub_plan.actions.insert(0, (label.clone(), action.clone()));
+                    best_plan = sub_plan.actions.clone();
                 }
             }
         }
-        let res = (best_score, best_time, best_plan);
+
+        let res = Plan {
+            total_discontentment: best_score,
+            total_time: best_time,
+            actions: best_plan,
+        };
         memo.insert(key, res.clone());
         res
     }
@@ -322,49 +355,58 @@ impl Planner {
         &self,
         model: &Model,
         depth: usize,
-        memo: &mut HashMap<(State, usize), (f32, i32, Vec<Action>)>,
-    ) -> (f32, i32, Vec<Action>) {
+        memo: &mut HashMap<(State, usize), Plan>,
+    ) -> Plan {
         let key = (model.state.clone(), depth);
         if let Some(result) = memo.get(&key) {
             return result.clone();
         }
         if depth == 0 {
             let score = model.calculate_discontentment();
-            let res = (score, 0, vec![]);
+            let res = Plan {
+                total_discontentment: score,
+                total_time: 0,
+                actions: vec![],
+            };
             memo.insert(key, res.clone());
             return res;
         }
 
         let current_score = model.calculate_discontentment();
-        let mut best_eff = f32::MIN;
+        let mut best_efficiency = f32::MIN;
         let mut best_time = 0;
+        let mut best_discontent = current_score;
         let mut best_plan = vec![];
 
-        for action in &self.actions {
-            if let Some(next_model) = model.apply(action) {
-                let discontent_delta = current_score - next_model.calculate_discontentment();
-                let efficiency = discontent_delta / action.duration.max(1) as f32;
+        for (label, action) in &self.actions {
+            if let Some(next_model) = model.apply(label.clone(), action) {
+                let sub_plan = self.best_efficiency_plan(&next_model, depth - 1, memo);
 
-                let (sub_score, sub_time, mut sub_plan) =
-                    self.best_efficiency_plan(&next_model, depth - 1, memo);
-                let sub_discontent_delta = current_score - sub_score;
-                let _sub_eff = sub_discontent_delta / (sub_time.max(1) as f32);
+                let total_discontent_delta = current_score - sub_plan.total_discontentment;
+                let total_time = sub_plan.total_time + action.duration;
+
+                // Calculate efficiency: discontent delta per unit time
+                let total_efficiency = total_discontent_delta / total_time.max(1) as f32;
 
                 // Pick the path that yields better efficiency
-                if efficiency > best_eff
-                    || (efficiency == best_eff && sub_time + action.duration < best_time)
+                if total_efficiency > best_efficiency
+                    || (total_efficiency == best_efficiency && total_time < best_time)
                 {
-                    best_eff = efficiency;
-                    best_time = sub_time + action.duration;
-                    sub_plan.insert(0, action.clone());
-                    best_plan = sub_plan;
+                    best_efficiency = total_efficiency;
+                    best_time = total_time;
+                    best_discontent = sub_plan.total_discontentment;
+                    let mut new_plan = sub_plan.actions.clone();
+                    new_plan.insert(0, (label.clone(), action.clone()));
+                    best_plan = new_plan;
                 }
             }
         }
-        // Reconstruct a "score" from the final efficiency.
-        // Alternatively, you might calculate final discontent instead.
-        let final_discontent = current_score - best_eff;
-        let res = (final_discontent, best_time, best_plan);
+
+        let res = Plan {
+            total_discontentment: best_discontent,
+            total_time: best_time,
+            actions: best_plan,
+        };
         memo.insert(key, res.clone());
         res
     }
@@ -374,15 +416,19 @@ impl Planner {
         &self,
         model: &Model,
         depth: usize,
-        memo: &mut HashMap<(State, usize), (f32, i32, Vec<Action>)>,
-    ) -> (f32, i32, Vec<Action>) {
+        memo: &mut HashMap<(State, usize), Plan>,
+    ) -> Plan {
         let key = (model.state.clone(), depth);
         if let Some(result) = memo.get(&key) {
             return result.clone();
         }
         if depth == 0 {
             let score = model.calculate_discontentment();
-            let res = (score, 0, vec![]);
+            let res = Plan {
+                total_discontentment: score,
+                total_time: 0,
+                actions: vec![],
+            };
             memo.insert(key, res.clone());
             return res;
         }
@@ -392,8 +438,8 @@ impl Planner {
         let mut best_time = 0;
         let mut best_plan = vec![];
 
-        for action in &self.actions {
-            if let Some(next_model) = model.apply(action) {
+        for (label, action) in &self.actions {
+            if let Some(next_model) = model.apply(label.clone(), action) {
                 let discontent_delta = current_score - next_model.calculate_discontentment();
                 let efficiency = discontent_delta / action.duration.max(1) as f32;
 
@@ -407,23 +453,30 @@ impl Planner {
                     next_model.calculate_discontentment()
                 };
 
-                let (_sub_score, sub_time, mut sub_plan) =
-                    self.best_hybrid_plan(&next_model, depth - 1, memo);
+                let mut sub_plan = self.best_hybrid_plan(&next_model, depth - 1, memo);
 
                 // Compare metric to decide best path
                 if metric < best_metric
-                    || (metric == best_metric && sub_time + action.duration < best_time)
+                    || (metric == best_metric && sub_plan.total_time + action.duration < best_time)
                 {
                     best_metric = metric;
-                    best_time = sub_time + action.duration;
-                    sub_plan.insert(0, action.clone());
-                    best_plan = sub_plan;
+                    best_time = sub_plan.total_time + action.duration;
+                    sub_plan.actions.insert(0, (label.clone(), action.clone()));
+                    best_plan = sub_plan.actions.clone();
                 }
             }
         }
-        // Construct final discontent.
-        let final_discontent = current_score - (1.0 / best_metric);
-        let res = (final_discontent, best_time, best_plan);
+
+        let final_discontent = if best_metric != f32::MAX {
+            current_score - (1.0 / best_metric)
+        } else {
+            current_score
+        };
+        let res = Plan {
+            total_discontentment: final_discontent,
+            total_time: best_time,
+            actions: best_plan,
+        };
         memo.insert(key, res.clone());
         res
     }
@@ -441,7 +494,7 @@ struct AStarNode {
     // The current model (state, etc.).
     model: Model,
     // Actions taken to reach this state.
-    plan: Vec<Action>,
+    plan: Vec<(String, Action)>,
 }
 
 // We need an ordering so the BinaryHeap picks the smallest estimated_total first.
