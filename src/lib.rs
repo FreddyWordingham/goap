@@ -6,7 +6,7 @@ mod planner;
 mod state;
 
 pub use action::Action;
-pub use config::Config;
+pub use config::{Config, Solution};
 pub use goal::Goal;
 pub use model::Model;
 pub use planner::Planner;

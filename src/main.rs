@@ -2,7 +2,7 @@ use std::{cmp::Ordering, fs, time::Instant};
 
 use colored::*;
 
-use goap_ai::{Config, Model, Planner, State};
+use goap_ai::{Action, Config, Model, Planner, Solution, State};
 
 fn print_state_headers(state: &State) {
     let mut names: Vec<_> = state.properties.keys().collect();
@@ -44,6 +44,24 @@ fn print_state_changes(old_state: &State, state: &State) {
     }
 }
 
+fn solve_fast(model: &Model, planner: &Planner) -> Vec<Action> {
+    println!("Solving with quick plan");
+    let start = Instant::now();
+    let (_final_discontentment, _total_duration, plan) = planner.best_plan(&model);
+    let duration = start.elapsed();
+    println!("Best plan in        : {:?}", duration);
+    plan
+}
+
+fn solve_best(model: &Model, planner: &Planner) -> Vec<Action> {
+    println!("Solving with best plan");
+    let start = Instant::now();
+    let (_final_discontentment, _total_duration, plan) = planner.quick_plan(&model);
+    let duration = start.elapsed();
+    println!("Quick plan in       : {:?}", duration);
+    plan
+}
+
 fn main() {
     let config_file = fs::read_to_string("config.yml").expect("Failed to read config file");
     let config: Config = serde_yaml::from_str(&config_file).expect("Failed to parse YAML");
@@ -53,23 +71,10 @@ fn main() {
     let planner = Planner::new(config.max_depth, config.actions);
 
     // Plan
-    let (score, time, plan) = if config.solve.to_lowercase() == "best" {
-        let start = Instant::now();
-        let pl = planner.best_plan(&model);
-        let duration = start.elapsed();
-        println!("Best plan in        : {:?}", duration);
-        pl
-    } else {
-        let start = Instant::now();
-        let pl = planner.quick_plan(&model);
-        let duration = start.elapsed();
-        println!("Quick plan in       : {:?}", duration);
-        pl
+    let plan = match config.solution {
+        Solution::Fast => solve_fast(&model, &planner),
+        Solution::Best => solve_best(&model, &planner),
     };
-    println!("Steps               : {}", plan.len());
-    println!("Est. Discontentment : {score}");
-    println!("Est. Time           : {time}");
-    println!("----------------------------");
 
     print_state_headers(&model.state);
     print_state_changes(&model.state, &model.state);
