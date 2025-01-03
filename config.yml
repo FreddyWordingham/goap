@@ -7,8 +7,8 @@ goals:
   - weight: 1
     property: "energy"
     target: 50
-    scale: 1
-    kind: StayBelow
+    kind: GreaterThanOrEqualTo
+    scale: 0.01
 actions:
   - label: "energy_up"
     duration: 2

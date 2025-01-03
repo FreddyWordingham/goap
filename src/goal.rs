@@ -4,9 +4,9 @@ use crate::State;
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum DiscontentmentKind {
-    StayAbove,
-    StayBelow,
-    StayAt,
+    GreaterThanOrEqualTo,
+    LessThanOrEqualTo,
+    EqualTo,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -23,9 +23,9 @@ impl Goal {
         let current_value = *state.properties.get(&self.property).unwrap_or(&0);
 
         let delta = match self.kind {
-            DiscontentmentKind::StayAbove => (self.target - current_value).max(0),
-            DiscontentmentKind::StayBelow => (current_value - self.target).max(0),
-            DiscontentmentKind::StayAt => (self.target - current_value).abs(),
+            DiscontentmentKind::GreaterThanOrEqualTo => (self.target - current_value).max(0),
+            DiscontentmentKind::LessThanOrEqualTo => (current_value - self.target).max(0),
+            DiscontentmentKind::EqualTo => (self.target - current_value).abs(),
         };
 
         self.scale * self.weight * delta as f32
