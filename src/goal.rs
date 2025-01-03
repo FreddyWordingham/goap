@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 use crate::State;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Clone, Debug, Deserialize)]
 pub enum DiscontentmentKind {
     GreaterThanOrEqualTo,

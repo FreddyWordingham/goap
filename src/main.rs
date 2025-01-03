@@ -47,7 +47,7 @@ fn print_state_changes(old_state: &State, state: &State) {
 fn solve_fast(model: &Model, planner: &Planner) -> Vec<Action> {
     println!("Solving with quick plan");
     let start = Instant::now();
-    let (_final_discontentment, _total_duration, plan) = planner.best_plan(&model);
+    let (_final_discontentment, _total_duration, plan) = planner.best_plan(model);
     let duration = start.elapsed();
     println!("Best plan in        : {:?}", duration);
     plan
@@ -56,7 +56,7 @@ fn solve_fast(model: &Model, planner: &Planner) -> Vec<Action> {
 fn solve_best(model: &Model, planner: &Planner) -> Vec<Action> {
     println!("Solving with best plan");
     let start = Instant::now();
-    let (_final_discontentment, _total_duration, plan) = planner.quick_plan(&model);
+    let (_final_discontentment, _total_duration, plan) = planner.quick_plan(model);
     let duration = start.elapsed();
     println!("Quick plan in       : {:?}", duration);
     plan
