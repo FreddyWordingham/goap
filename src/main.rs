@@ -45,6 +45,7 @@ fn print_state_changes(old_state: &State, state: &State) {
 }
 
 fn main() {
+    // Read in (or alternatively, build) the configuration
     let config_str = fs::read_to_string("config.yml").expect("Failed to read config file");
     let config: Config = serde_yaml::from_str(&config_str).expect("Failed to parse YAML");
 
@@ -57,7 +58,7 @@ fn main() {
         config.actions,
     );
 
-    // Plan
+    // Generate the plan
     let plan = planner.plan(&model);
 
     print_state_headers(&model.state);
