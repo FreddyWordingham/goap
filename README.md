@@ -1,7 +1,15 @@
-# G.O.A.P. AI
+<p align="center" style="font-size: 2.5em">
+  G.O.A.P. AI  
+</p>
+<p align="center">
+    <img src="./assets/images/goap.png" alt="G.O.A.P. AI Icon" width="200" />
+</p>
+<p align="center" style="font-size: 1.5em">
+  Goal Orientated Action Planning AI
+</p>
 
-Goal Orientated Action Planning AI is a library for creating AI agents which plan their actions based on a set of overall goals.
-It is suitable for use in games and simulations where the AI needs to respond dynamically to a changing environment.
+Goap-AI a library for creating AI agents which plan their actions based on a set of overall goals.
+It is suitable for use in games and simulations where the agent needs to respond dynamically to a changing environment.
 
 ## Installation
 
@@ -115,7 +123,9 @@ actions:
       energy: -1
 ```
 
-#### Planning Algorithms
+### Planner
+
+#### Algorithms
 
 Our planner offers three primary algorithms, each optimized for specific scenarios and requirements:
 
@@ -128,9 +138,7 @@ Each algorithm operates in one of two solution modes:
 - **Fast**: Prioritizes speed, delivering quick but potentially suboptimal plans.
 - **Best**: Seeks the most optimal plan, which may require more computational resources and time.
 
----
-
-### 1. Traditional Planning
+##### 1. Traditional Planning
 
 **Description:**  
 Utilizes an exhaustive depth-first search approach to explore all possible action sequences up to a specified `max_depth`. This method aims to minimize total discontentment without considering the time efficiency of actions.
@@ -138,9 +146,7 @@ Utilizes an exhaustive depth-first search approach to explore all possible actio
 **Use Case:**  
 Ideal for scenarios where achieving the lowest possible discontentment is crucial, and there are no strict time constraints.
 
----
-
-### 2. Efficiency-Based Planning
+##### 2. Efficiency-Based Planning
 
 **Description:**  
 Focuses on maximizing discontentment reduction per unit of time. This approach favors actions that offer the most significant improvement in discontentment for the least time investment.
@@ -148,9 +154,7 @@ Focuses on maximizing discontentment reduction per unit of time. This approach f
 **Use Case:**  
 Perfect for time-critical tasks where actions have varying durations, and quick responsiveness is essential.
 
----
-
-### 3. Hybrid Planning
+##### 3. Hybrid Planning
 
 **Description:**  
 Combines both traditional and efficiency-based strategies. It dynamically switches between minimizing discontentment and optimizing efficiency based on the current planning context.
@@ -158,11 +162,9 @@ Combines both traditional and efficiency-based strategies. It dynamically switch
 **Use Case:**  
 Suitable for complex environments where both optimal discontentment reduction and time efficiency are important, allowing the planner to adapt to changing priorities.
 
----
+#### Solution Modes
 
-### Solution Modes
-
-#### **Fast**
+##### **Fast**
 
 **Description:**  
 Employs heuristic-based algorithms (e.g., A\*) to generate plans swiftly. While faster, these plans may not always be the most optimal.
@@ -176,7 +178,7 @@ Employs heuristic-based algorithms (e.g., A\*) to generate plans swiftly. While 
 
 - Potentially suboptimal plans compared to exhaustive search methods
 
-#### **Best**
+##### **Best**
 
 **Description:**  
 Uses exhaustive search techniques to explore all possible action sequences up to `max_depth`, ensuring the most optimal plan is found.
@@ -190,9 +192,7 @@ Uses exhaustive search techniques to explore all possible action sequences up to
 - Higher computational cost
 - Longer planning time
 
----
-
-### Selecting the Right Algorithm and Solution
+#### Selecting the Right Algorithm and Solution
 
 | **Scenario**                   | **Efficiency-Based Planning**                      | **Traditional Planning**                               | **Hybrid Planning**                                        |
 | ------------------------------ | -------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------- |
@@ -201,9 +201,7 @@ Uses exhaustive search techniques to explore all possible action sequences up to
 | **Long-Term Optimization**     | May overlook global optima                         | ✅ **Best for overall balance**                        | ✅ **Adaptive choice** (balances long-term and short-term) |
 | **Dynamic, Real-Time Systems** | ✅ **Adapts well to changes**                      | Struggles with rigid priorities                        | ✅ **Highly adaptable** (switches strategies as needed)    |
 
----
-
-### Configuration
+#### Configuration
 
 You can set the maximum number of steps the agent will take to plan a sequence of actions using the following YAML configuration:
 
@@ -215,6 +213,66 @@ plan:
 ```
 
 ## Run
+
+With a complete configuration such as the one below:
+
+```yaml
+max_depth: 10
+algorithm: Traditional
+solution: Fast
+state:
+  energy: 50
+  health: 20
+  num_apples: 2
+  num_uncooked_meat: 0
+  num_cooked_meat: 0
+goals:
+  health:
+    target: 100
+    kind: GreaterThanOrEqualTo
+    weight: 4
+  energy:
+    target: 100
+    kind: GreaterThanOrEqualTo
+    weight: 1
+actions:
+  gather:
+    duration: 1
+    deltas:
+      energy: -5
+      num_apples: 5
+  hunt:
+    duration: 20
+    deltas:
+      energy: -10
+      num_uncooked_meat: 3
+  cook:
+    duration: 2
+    deltas:
+      energy: -5
+      num_uncooked_meat: -1
+      num_cooked_meat: 1
+  eat_apple:
+    duration: 1
+    deltas:
+      energy: 5
+      health: 5
+      num_apples: -1
+  eat_cooked_meat:
+    duration: 1
+    deltas:
+      energy: 20
+      health: 30
+      num_cooked_meat: -1
+  rest:
+    duration: 5
+    deltas:
+      energy: 10
+  wait:
+    duration: 1
+    deltas:
+      energy: -1
+```
 
 You can then generate a plan of action:
 
