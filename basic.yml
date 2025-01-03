@@ -13,15 +13,19 @@ goals:
   - weight: 1
     property: "energy"
     target: 100
+    kind: StayAbove
   - weight: 1
     property: "health"
     target: 30
+    kind: StayAbove
   - weight: 1
     property: "consciousness"
     target: 10
+    kind: StayAbove
   - weight: 1
     property: "fire"
     target: 1
+    kind: StayAbove
 actions:
   - label: "gather_wood"
     duration: 2

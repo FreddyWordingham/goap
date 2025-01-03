@@ -4,15 +4,17 @@ use crate::State;
 
 #[derive(Clone, Debug, Deserialize)]
 pub enum DiscontentmentKind {
-    StayAbove, // Original: Keep value above the target
-    StayBelow, // New: Keep value below the target
+    StayAbove,
+    StayBelow,
+    StayAt,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Goal {
-    weight: f32,
     property: String,
-    target: i32,
+    target: i32, // Value to achieve
+    scale: f32,  // Discontentment per delta from target
+    weight: f32, // Overall goal weighting
     kind: DiscontentmentKind,
 }
 
@@ -20,21 +22,12 @@ impl Goal {
     pub fn discontentment(&self, state: &State) -> f32 {
         let current_value = *state.properties.get(&self.property).unwrap_or(&0);
 
-        match self.kind {
-            DiscontentmentKind::StayAbove => {
-                if current_value < self.target {
-                    ((self.target - current_value).max(0) as f32 / self.target as f32) * self.weight
-                } else {
-                    0.0
-                }
-            }
-            DiscontentmentKind::StayBelow => {
-                if current_value > self.target {
-                    ((current_value - self.target).max(0) as f32 / self.target as f32) * self.weight
-                } else {
-                    0.0
-                }
-            }
-        }
+        let delta = match self.kind {
+            DiscontentmentKind::StayAbove => (self.target - current_value).max(0),
+            DiscontentmentKind::StayBelow => (current_value - self.target).max(0),
+            DiscontentmentKind::StayAt => (self.target - current_value).abs(),
+        };
+
+        self.scale * self.weight * delta as f32
     }
 }
